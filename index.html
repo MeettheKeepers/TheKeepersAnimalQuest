@@ -95,7 +95,7 @@
   .vine-leaf-a{ fill:var(--accent); }
   .vine-leaf-b{ fill:var(--accent-strong); opacity:.85; }
   .vine-dot{ fill:var(--gold); }
-  @media (max-width:480px){ .vine{ width:104px; } .vine-garland{ opacity:.45; } }
+  @media (max-width:480px){ .vine{ width:104px; } .vine-garland{ opacity:.45; } .stage{ padding-left:10px; padding-right:10px; } }
   @media (prefers-reduced-motion:no-preference){ .vine{ transition: opacity .3s ease; } }
 
   .stage{ max-width: 940px; margin: 0 auto; padding: 20px 20px 64px; position:relative; z-index:1; }
@@ -373,10 +373,14 @@
   /* ---------- Safari Search ---------- */
   .ks-panel{ padding:16px; }
   .ks-stage{
-    position:relative; width:100%; max-width:640px; margin:0 auto;
+    position:relative; width:100%; max-width:900px; margin:0 auto;
     aspect-ratio:3/2; border-radius:22px; overflow:hidden; cursor:crosshair;
     background:var(--surface-2); touch-action:manipulation;
     box-shadow: inset 0 0 0 1px rgba(0,0,0,.12), 0 10px 22px var(--shadow);
+  }
+  @media (max-width:640px){
+    .ks-panel{ padding:8px; }
+    .ks-stage{ border-radius:16px; }
   }
   .ks-scene-img{
     position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;
@@ -414,7 +418,7 @@
   }
   @keyframes ks-ripple-fade{ 0%{ transform:scale(.4); opacity:.9; } 100%{ transform:scale(2.6); opacity:0; } }
   .ks-hint{ text-align:center; color:var(--text-muted); font-weight:700; font-size:12.5px; margin:10px 0 0; }
-  .ks-checklist{ display:grid; grid-template-columns:repeat(auto-fill,minmax(78px,1fr)); gap:12px; margin-top:18px; }
+  .ks-checklist{ display:grid; grid-template-columns:repeat(auto-fill,minmax(78px,1fr)); gap:12px; margin:18px auto 0; max-width:900px; }
   .ks-check-item{
     display:flex; align-items:center; justify-content:center;
     background:var(--surface-2); border:2px solid var(--border); border-radius:16px;
