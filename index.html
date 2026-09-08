@@ -419,6 +419,31 @@
   @keyframes ks-ripple-fade{ 0%{ transform:scale(.4); opacity:.9; } 100%{ transform:scale(2.6); opacity:0; } }
   .ks-hint{ text-align:center; color:var(--text-muted); font-weight:700; font-size:12.5px; margin:10px 0 0; }
   .ks-checklist{ display:grid; grid-template-columns:repeat(auto-fill,minmax(78px,1fr)); gap:12px; margin:18px auto 0; max-width:900px; }
+
+  /* Fit the whole search screen on one landscape phone/tablet view: hide the
+     branding bar, shrink the game head, and lay the picture + checklist side by side. */
+  @media (orientation:landscape) and (max-height:840px){
+    .stage:has(#game-search:not([hidden])) > .topbar{ display:none; }
+    .stage:has(#game-search:not([hidden])){ padding-top:10px; padding-bottom:10px; }
+    #game-search .game-head{ margin-bottom:8px; }
+    #game-search .game-title h2{ font-size:17px; }
+    .ks-panel{
+      display:flex; align-items:flex-start; gap:14px; padding:8px;
+    }
+    .ks-stage{
+      width:auto; flex:0 1 auto; margin:0;
+      height: calc(100vh - 76px); height: calc(100dvh - 76px);
+      max-height: calc(100vh - 76px); max-height: calc(100dvh - 76px);
+      max-width:58vw;
+    }
+    .ks-hint{ display:none; }
+    .ks-checklist{
+      flex:1 1 auto; max-width:none; margin:0; align-content:flex-start;
+      grid-template-columns:repeat(2,minmax(60px,1fr)); gap:8px;
+      max-height: calc(100vh - 76px); max-height: calc(100dvh - 76px);
+      overflow-y:auto;
+    }
+  }
   .ks-check-item{
     display:flex; align-items:center; justify-content:center;
     background:var(--surface-2); border:2px solid var(--border); border-radius:16px;
