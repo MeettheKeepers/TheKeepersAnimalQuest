@@ -341,7 +341,7 @@
   /* ---------- Creature Colours ---------- */
   .coloring-wrap{ display:flex; flex-direction:column; align-items:center; gap:6px; }
   #turtleSvg{ width:100%; max-width:340px; height:auto; }
-  .region{ cursor:pointer; transition: fill .15s ease; }
+  .region{ cursor:pointer; transition: fill .15s ease, opacity .35s ease; }
   .region.shake{ animation: shake .4s ease; }
   .coloring-hint{ margin: 4px 0 4px; color: var(--text-muted); font-size:14px; text-align:center; }
   .palette-row{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:14px; }
@@ -778,7 +778,7 @@
       </div>
       <div class="panel coloring-wrap">
         <svg id="turtleSvg" viewBox="0 0 300 300" role="img" aria-label="Shelly the turtle, ready to be colored in"></svg>
-        <p class="coloring-hint">Pick a numbered color, then tap the matching part of the picture.</p>
+        <p class="coloring-hint" id="coloringHint">Pick a numbered color, then tap the matching part of the picture.</p>
         <div class="palette-row" id="paintPalette"></div>
         <button class="clear-btn" id="paintClear" type="button">Clear page</button>
       </div>
@@ -1227,6 +1227,8 @@ var TURTLE_THUMB = "data:image/webp;base64,UklGRtwiAABXRUJQVlA4INAiAACwfACdASosA
   function buildPalette(picture){
     var wrap = document.getElementById("paintPalette");
     wrap.innerHTML = "";
+    if(picture.kind === "raster"){ wrap.style.display = "none"; return; }
+    wrap.style.display = "";
     picture.palette.forEach(function(p){
       var b = document.createElement("button");
       b.type = "button";
@@ -1292,15 +1294,26 @@ var TURTLE_THUMB = "data:image/webp;base64,UklGRtwiAABXRUJQVlA4INAiAACwfACdASosA
         svg.appendChild(eye);
       });
     } else {
+      // Reveal mechanic: a fully-colored "answer" picture sits underneath a
+      // blank paper-white cover, cut into the exact same pieces. Tapping a
+      // piece just removes its cover, so the color that appears is always
+      // guaranteed to be the real, correctly-placed color underneath.
       regions.forEach(function(region){
-        var el = document.createElementNS(SVGNS, "path");
-        el.setAttribute("d", region.pathD);
-        el.setAttribute("class", "region");
-        el.setAttribute("style", "fill:var(--surface-2);");
-        el.dataset.num = region.num;
-        el.dataset.filled = "0";
-        el.addEventListener("click", function(){ onRegionClick(el, region); });
-        svg.appendChild(el);
+        var answer = document.createElementNS(SVGNS, "path");
+        answer.setAttribute("d", region.pathD);
+        var swatch = picture.palette.filter(function(p){ return p.num === region.num; })[0];
+        answer.setAttribute("style", "fill:" + (swatch ? swatch.hex : "var(--surface-2)") + "; pointer-events:none;");
+        svg.appendChild(answer);
+      });
+      regions.forEach(function(region){
+        var cover = document.createElementNS(SVGNS, "path");
+        cover.setAttribute("d", region.pathD);
+        cover.setAttribute("class", "region");
+        cover.setAttribute("style", "fill:#fdfaf2;");
+        cover.dataset.num = region.num;
+        cover.dataset.filled = "0";
+        cover.addEventListener("click", function(){ onRegionClick(cover, region); });
+        svg.appendChild(cover);
       });
       var img = document.createElementNS(SVGNS, "image");
       img.setAttributeNS("http://www.w3.org/1999/xlink", "href", picture.lineartSrc);
@@ -1310,25 +1323,6 @@ var TURTLE_THUMB = "data:image/webp;base64,UklGRtwiAABXRUJQVlA4INAiAACwfACdASosA
       img.setAttribute("width", vb[2]); img.setAttribute("height", vb[3]);
       img.setAttribute("style", "pointer-events:none;");
       svg.appendChild(img);
-
-      var shortSide = Math.min(Number(vb[2]), Number(vb[3]));
-      var labelR = Math.max(16, shortSide * 0.034);
-      regions.forEach(function(region){
-        var pt = labelPoint(region.pathD);
-        var dot = document.createElementNS(SVGNS, "circle");
-        dot.setAttribute("cx", pt[0]); dot.setAttribute("cy", pt[1]); dot.setAttribute("r", labelR);
-        dot.setAttribute("style", "fill:#fffaf0; stroke:var(--text); stroke-width:1.5; pointer-events:none;");
-        svg.appendChild(dot);
-        var label = document.createElementNS(SVGNS, "text");
-        label.setAttribute("x", pt[0]); label.setAttribute("y", pt[1] + labelR * 0.36);
-        label.setAttribute("text-anchor", "middle");
-        label.setAttribute("font-size", labelR * 1.15);
-        label.setAttribute("font-weight", "800");
-        label.setAttribute("fill", "#3a2b1e");
-        label.setAttribute("style", "pointer-events:none; font-family:'Baloo 2',sans-serif;");
-        label.textContent = region.num;
-        svg.appendChild(label);
-      });
     }
   }
   function labelPoint(pathD){
@@ -1377,6 +1371,13 @@ var TURTLE_THUMB = "data:image/webp;base64,UklGRtwiAABXRUJQVlA4INAiAACwfACdASosA
   }
   function onRegionClick(el, region){
     if(el.dataset.filled === "1") return;
+    if(paint.picture.kind === "raster"){
+      el.style.fill = "transparent";
+      el.dataset.filled = "1";
+      paint.filled++;
+      if(paint.filled >= paint.total) setTimeout(finishPaint, 400);
+      return;
+    }
     if(Number(region.num) !== paint.active){
       el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake");
       paint.mistakes++;
@@ -1393,6 +1394,10 @@ var TURTLE_THUMB = "data:image/webp;base64,UklGRtwiAABXRUJQVlA4INAiAACwfACdASosA
     paint = { active:1, filled:0, total:0, mistakes:0, picture:picture };
     buildPalette(picture);
     buildPaintSVG(picture);
+    var hint = document.getElementById("coloringHint");
+    hint.textContent = picture.kind === "raster"
+      ? "Tap anywhere on the picture to bring the color to life!"
+      : "Pick a numbered color, then tap the matching part of the picture.";
     showView("game-paint");
   }
   function finishPaint(){
@@ -1402,7 +1407,9 @@ var TURTLE_THUMB = "data:image/webp;base64,UklGRtwiAABXRUJQVlA4INAiAACwfACdASosA
     showResult({
       eyebrow: "Creature Colours complete",
       title: picture.name + " is all colored in!",
-      detail: "You matched every number to its color like a real Keeper artist.",
+      detail: picture.kind === "raster"
+        ? "You brought the whole picture to life, every piece!"
+        : "You matched every number to its color like a real Keeper artist.",
       stars: stars,
       replay: function(){ startPaint(picture); }
     });
