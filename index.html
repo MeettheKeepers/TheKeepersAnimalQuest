@@ -1829,15 +1829,11 @@ var PAINT_PICTURES = [{"id":"skunk","name":"Sammy the Skunk","w":380,"h":357,"co
     var tctx = tmp.getContext("2d");
     tctx.drawImage(canvas, 0, 0, sw, sh);
     var data = tctx.getImageData(0, 0, sw, sh).data;
-    var clearedTotal = 0, total = sw * sh;
-    for(var i = 3; i < data.length; i += 4){ if(data[i] < 40) clearedTotal++; }
-    var pct = Math.round((clearedTotal / total) * 100);
-    document.getElementById("dinoBarFill").style.width = pct + "%";
-    document.getElementById("dinoPctLabel").textContent = pct + "%";
 
     var level = dino.level;
+    var perHotspotPct = [];
     level.hotspots.forEach(function(h){
-      if(dino.found[h.id]) return;
+      if(dino.found[h.id]){ perHotspotPct.push(1); return; }
       var x0 = Math.max(0, Math.floor(h.x * sw)), x1 = Math.min(sw, Math.ceil((h.x + h.w) * sw));
       var y0 = Math.max(0, Math.floor(h.y * sh)), y1 = Math.min(sh, Math.ceil((h.y + h.h) * sh));
       var cleared = 0, cnt = 0;
@@ -1848,12 +1844,22 @@ var PAINT_PICTURES = [{"id":"skunk","name":"Sammy the Skunk","w":380,"h":357,"co
           cnt++;
         }
       }
-      if(cnt > 0 && (cleared / cnt) >= 0.55){
+      var frac = cnt > 0 ? (cleared / cnt) : 0;
+      perHotspotPct.push(Math.min(1, frac / 0.55));
+      if(frac >= 0.55){
         dino.found[h.id] = true;
         document.getElementById("dinoFoundCount").textContent = Object.keys(dino.found).length;
         showDinoToast(h.name);
       }
     });
+
+    // Progress bar tracks how close each fossil is to being uncovered,
+    // so it climbs steadily in step with the fossils found instead of
+    // lagging behind (or jumping) based on total sand cleared.
+    var progressSum = perHotspotPct.reduce(function(a, b){ return a + b; }, 0);
+    var pct = Math.round((progressSum / level.hotspots.length) * 100);
+    document.getElementById("dinoBarFill").style.width = pct + "%";
+    document.getElementById("dinoPctLabel").textContent = pct + "%";
 
     if(Object.keys(dino.found).length >= level.hotspots.length && !dino.finished){
       dino.finished = true;
