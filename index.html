@@ -1292,7 +1292,7 @@
     <div class="hud">
       <button class="pause-btn" id="pauseBtn" type="button">&#9208;</button>
       <div class="hud-chip hud-lives" id="livesChip">
-        <span class="heart" data-i="0">&#128062;</span><span class="heart" data-i="1">&#128062;</span><span class="heart" data-i="2">&#128062;</span>
+        <span class="heart" data-i="0">&#128062;</span><span class="heart" data-i="1">&#128062;</span><span class="heart" data-i="2">&#128062;</span><span class="heart" data-i="3">&#128062;</span><span class="heart" data-i="4">&#128062;</span>
       </div>
       <div class="hud-chip hud-coins"><span class="ico">&#129689;</span><span id="coinCount">0</span></div>
       <div class="hud-chip hud-score"><span class="ico">&#127937;</span><span id="scoreCount">0</span></div>
@@ -1308,6 +1308,7 @@
           <span>&#128070; Swipe left/right to move</span>
           <span>&#128070; Swipe up to jump</span>
           <span>&#128070; Swipe down to duck</span>
+          <span>&#128062; You get 5 lives per run</span>
         </div>
         <p class="howto-note">Arrow keys work too, if you'd rather type than swipe.</p>
         <button class="jg-btn jg-btn-primary" id="startBtn" type="button">Start Run</button>
@@ -1319,7 +1320,7 @@
       <div class="card-inner">
         <img class="portrait" id="readyPortrait" alt="">
         <h2 id="readyTitle">Ready, Fox?</h2>
-        <p>Swipe to dodge. First to the waterfall wins bragging rights!</p>
+        <p>You have <strong>5 lives</strong> — swipe to dodge and see how far you get!</p>
         <div id="countdownNum" style="font-family:'Baloo 2',sans-serif; font-size:44px; color:var(--gold-dark); margin:10px 0 2px;">3</div>
       </div>
     </div>
@@ -3773,7 +3774,7 @@ var KS_SCENES = [
     coins = [];
     particles = [];
     run = {
-      speed: char.baseSpeed, distance:0, coins:0, score:0, lives:3,
+      speed: char.baseSpeed, distance:0, coins:0, score:0, lives:5,
       spawnTimer: 0.4, elapsed:0, shakeT:0
     };
   }
@@ -4120,12 +4121,30 @@ var KS_SCENES = [
       ctx.beginPath(); ctx.ellipse(46,-17,10,13,0,0,Math.PI*2); ctx.fill();
       ctx.fillStyle="rgba(0,0,0,.18)"; ctx.beginPath(); ctx.ellipse(0,14,50,10,0,0,Math.PI*2); ctx.fill();
     } else if(o.kind==="under"){
-      ctx.strokeStyle = "#3f7a3f"; ctx.lineWidth = 10; ctx.lineCap="round";
-      ctx.beginPath(); ctx.moveTo(-48,-64); ctx.quadraticCurveTo(0,-46,48,-64); ctx.stroke();
-      ctx.fillStyle = "#5c9a4c";
-      for(var lx=-40; lx<=40; lx+=20){
-        ctx.beginPath(); ctx.ellipse(lx, -55+Math.sin(lx*0.2)*4, 9,13,0,0,Math.PI*2); ctx.fill();
+      var archHalf = 48, postW = 10, barY = -80, barH = 16, postBottom = 4;
+      ctx.fillStyle = "rgba(0,0,0,.18)";
+      ctx.beginPath(); ctx.ellipse(0,14,54,10,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#4a2f18";
+      ctx.fillRect(-archHalf-postW, barY, postW, postBottom-barY);
+      ctx.fillRect(archHalf, barY, postW, postBottom-barY);
+      ctx.fillStyle = "#a3703c";
+      ctx.fillRect(-archHalf-postW, barY, (archHalf+postW)*2, barH);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(-archHalf-postW, barY, (archHalf+postW)*2, barH); ctx.clip();
+      ctx.fillStyle = "#ffcc40";
+      for(var sx=-archHalf-postW-barH; sx<archHalf+postW+barH; sx+=28){
+        ctx.save();
+        ctx.translate(sx+barH, barY+barH/2);
+        ctx.rotate(-0.5);
+        ctx.fillRect(-7, -40, 14, 80);
+        ctx.restore();
       }
+      ctx.restore();
+      ctx.fillStyle = "rgba(255,255,255,.3)";
+      ctx.fillRect(-archHalf-postW, barY, (archHalf+postW)*2, 3);
+      ctx.fillStyle = "#5c9a4c";
+      ctx.beginPath(); ctx.ellipse(-archHalf-2, barY-4, 9,7,0.4,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(archHalf+2, barY-4, 9,7,-0.4,0,Math.PI*2); ctx.fill();
     }
     ctx.restore();
   }
@@ -4175,6 +4194,49 @@ var KS_SCENES = [
     ctx.restore();
   }
 
+  function getActionCue(){
+    var best = null;
+    for(var i=0;i<obstacles.length;i++){
+      var o = obstacles[i];
+      if(o.checked || o.lane!==player.lane) continue;
+      if(o.kind!=="over" && o.kind!=="under") continue;
+      if(o.z < -0.05) continue;
+      if(!best || o.z < best.z) best = o;
+    }
+    return best;
+  }
+  function drawActionCue(t){
+    var cue = getActionCue();
+    if(!cue) return;
+    var showFrom = 0.60;
+    if(cue.z > showFrom) return;
+    var idealHigh = 0.09 + run.speed*0.478;
+    var idealLow = 0.09 + run.speed*0.0624;
+    if(idealHigh <= idealLow) idealHigh = idealLow + 0.05;
+    var inWindow = cue.z <= idealHigh && cue.z >= idealLow;
+    var appear = Math.max(0, Math.min(1, (showFrom - cue.z) / Math.max(0.001, showFrom - idealHigh)));
+    var pulse = inWindow ? (0.88 + Math.sin(t*24)*0.16) : 1;
+    var scale = (0.55 + appear*0.55) * pulse;
+    var alpha = 0.3 + appear*0.7;
+    var x = player.x, y = GROUND_Y-256;
+    ctx.save();
+    ctx.translate(x,y);
+    if(inWindow){
+      ctx.globalAlpha = 0.3 + Math.sin(t*24)*0.12;
+      ctx.beginPath(); ctx.arc(0,0,32,0,Math.PI*2);
+      ctx.fillStyle = "#ffcc40"; ctx.fill();
+    }
+    ctx.globalAlpha = alpha;
+    ctx.scale(scale,scale);
+    ctx.fillStyle = inWindow ? "#ffcc40" : "#fff8ea";
+    ctx.strokeStyle = "rgba(20,15,5,.5)"; ctx.lineWidth = 5;
+    ctx.font = "bold 48px sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    var glyph = cue.kind==="over" ? "\u25B2" : "\u25BC";
+    ctx.strokeText(glyph, 0, 2);
+    ctx.fillText(glyph, 0, 2);
+    ctx.restore();
+  }
   function render(t){
     ctx.save();
     if(run && run.shakeT>0){
@@ -4191,6 +4253,7 @@ var KS_SCENES = [
     drawList.forEach(function(d){ d.fn(); });
 
     if(state.screen==="playing" || state.screen==="paused") drawPlayer(t);
+    if(state.screen==="playing") drawActionCue(t);
 
     particles.forEach(function(pt){
       var p = perspective(0.02);
