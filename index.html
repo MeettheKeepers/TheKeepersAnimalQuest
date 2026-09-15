@@ -454,16 +454,26 @@
     background:var(--surface-2); border:1px solid var(--border); border-radius:18px; overflow:hidden;
     box-shadow:0 6px 0 var(--border), 0 14px 26px var(--shadow);
   }
+  .rc-stage-inner{ position:absolute; inset:0; width:100%; height:100%; }
+  .rc-stage.rc-rotated .rc-stage-inner{
+    position:absolute; inset:auto;
+    transform: rotate(90deg);
+    transform-origin: center center;
+  }
   #rcCanvas{ position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
   .rc-countdown{
     position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     font-family:'Baloo 2',sans-serif; font-size:88px; font-weight:800; color:#fff;
     text-shadow:0 4px 0 rgba(0,0,0,.35); background:rgba(10,20,14,.28); pointer-events:none;
   }
+  .rc-stage.rc-rotated .rc-countdown{ transform: rotate(-90deg); }
   .rc-toast{
     position:absolute; top:10px; left:50%; transform:translateX(-50%);
     background:rgba(20,16,10,.72); color:#fff; padding:8px 18px; border-radius:999px;
     font-family:'Baloo 2',sans-serif; font-weight:700; font-size:15px; pointer-events:none;
+  }
+  .rc-stage.rc-rotated .rc-toast{
+    top:50%; left:14px; transform: translateY(-50%) rotate(-90deg);
   }
   .rc-panel-wrap{ position:relative; width:100%; max-width:560px; margin:16px auto 0; user-select:none; -webkit-user-select:none; }
   .rc-panel-img{ width:100%; display:block; pointer-events:none; border-radius:14px; }
@@ -1525,9 +1535,11 @@
             <span class="progress-pill" id="rcCrashPill">&#128165; 0</span>
           </div>
           <div class="rc-stage" id="rcStage">
-            <canvas id="rcCanvas"></canvas>
-            <div class="rc-countdown" id="rcCountdown" hidden></div>
-            <div class="rc-toast" id="rcToast" hidden></div>
+            <div class="rc-stage-inner" id="rcStageInner">
+              <canvas id="rcCanvas"></canvas>
+              <div class="rc-countdown" id="rcCountdown" hidden></div>
+              <div class="rc-toast" id="rcToast" hidden></div>
+            </div>
           </div>
           <p class="ks-hint">Arrow keys steer &bull; or use the wheel and lever below</p>
           <div class="rc-panel-wrap" id="rcPanelWrap">
@@ -4197,16 +4209,16 @@ var KS_SCENES = [
 
   var RC_TRACK_W = 1000, RC_TRACK_H = 483;
   var RC_CX = 500, RC_CY = 265;
-  var RC_OUTER_RX = 415, RC_OUTER_RY = 158;
-  var RC_INNER_RX = 215, RC_INNER_RY = 85;
+  var RC_OUTER_RX = 440, RC_OUTER_RY = 175;
+  var RC_INNER_RX = 195, RC_INNER_RY = 68;
   var RC_MID_RX = (RC_OUTER_RX+RC_INNER_RX)/2, RC_MID_RY = (RC_OUTER_RY+RC_INNER_RY)/2;
   var RC_START_ANGLE = Math.PI/2;
   var RC_CHECK_ANGLE = -Math.PI/2;
   var RC_TOTAL_LAPS = 10;
   var RC_LAP_LEN = 1440;
-  var RC_CAR_LEN = 42, RC_CAR_W = 17;
+  var RC_CAR_LEN = 54, RC_CAR_W = 22;
   var RC_SPRITE_OFFSET = Math.PI;
-  var RC_COLLIDE_R = 24;
+  var RC_COLLIDE_R = 29;
   var RC_CRASH_LIMIT = 6;
   var RC_MAX_SPEED=260, RC_MAX_REV=120, RC_ACCEL=230, RC_FRICTION=170, RC_TURN_RATE=2.8;
 
@@ -4548,6 +4560,43 @@ var KS_SCENES = [
     document.getElementById("rcStartBtn").disabled = !(rcSelectedCar && rcSelectedDiff);
   }
 
+  function rcLayoutStage(){
+    var stage = document.getElementById("rcStage");
+    var inner = document.getElementById("rcStageInner");
+    if(!stage || !inner) return;
+    var wrap = document.getElementById("rcRaceWrap");
+    if(!wrap || wrap.hidden) return;
+    var portrait = window.innerWidth < 720 && window.innerHeight > window.innerWidth;
+    if(!portrait){
+      stage.classList.remove("rc-rotated");
+      stage.style.width = "";
+      stage.style.height = "";
+      inner.style.width = "";
+      inner.style.height = "";
+      inner.style.left = "";
+      inner.style.top = "";
+      return;
+    }
+    var container = stage.parentElement;
+    var availW = container ? container.clientWidth : window.innerWidth;
+    if(!availW) return;
+    var naturalH = availW * (RC_TRACK_W / RC_TRACK_H);
+    var maxH = window.innerHeight * 0.72;
+    var outerW, outerH;
+    if(naturalH <= maxH){
+      outerW = availW; outerH = naturalH;
+    } else {
+      outerH = maxH; outerW = maxH * (RC_TRACK_H / RC_TRACK_W);
+    }
+    stage.classList.add("rc-rotated");
+    stage.style.width = outerW + "px";
+    stage.style.height = outerH + "px";
+    inner.style.width = outerH + "px";
+    inner.style.height = outerW + "px";
+    inner.style.left = ((outerW - outerH) / 2) + "px";
+    inner.style.top = ((outerH - outerW) / 2) + "px";
+  }
+
   function openRacingSelect(){
     rc = null;
     document.getElementById("rcSetup").hidden = false;
@@ -4583,6 +4632,7 @@ var KS_SCENES = [
     rcUpdateCrashHud();
     document.getElementById("rcCountdown").hidden = false;
     showView("game-racing");
+    rcLayoutStage();
     requestAnimationFrame(rcRaceLoop);
   }
 
@@ -4626,6 +4676,8 @@ var KS_SCENES = [
     });
     document.getElementById("rcChangeBtn").addEventListener("click", function(){ rc=null; openRacingSelect(); });
     document.getElementById("rcBackBtn").addEventListener("click", function(){ if(rc) rc.running=false; rc=null; goHome(); });
+    window.addEventListener("resize", rcLayoutStage);
+    window.addEventListener("orientationchange", function(){ setTimeout(rcLayoutStage, 200); });
   }
   rcInit();
 
