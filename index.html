@@ -466,7 +466,14 @@
     background:rgba(20,16,10,.72); color:#fff; padding:8px 18px; border-radius:999px;
     font-family:'Baloo 2',sans-serif; font-weight:700; font-size:15px; pointer-events:none;
   }
-  .rc-panel-wrap{ position:relative; width:100%; max-width:560px; margin:16px auto 0; user-select:none; -webkit-user-select:none; }
+  .rc-arrow-row{ position:relative; width:100%; max-width:560px; margin:14px auto 6px; height:30px; }
+  .rc-arrow{ position:absolute; top:0; height:100%; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .rc-arrow span{ font-size:20px; font-weight:800; color:var(--gold); text-shadow:0 2px 0 rgba(0,0,0,.3); line-height:1; }
+  .rc-arrow-wheel-l{ left:20%; width:28%; }
+  .rc-arrow-wheel-r{ left:48%; width:28%; }
+  .rc-arrow-lever{ left:78%; width:20%; flex-direction:column; gap:1px; }
+  .rc-arrow-lever span{ font-size:14px; }
+  .rc-panel-wrap{ position:relative; width:100%; max-width:560px; margin:0 auto 0; user-select:none; -webkit-user-select:none; }
   .rc-panel-img{ width:100%; display:block; pointer-events:none; border-radius:14px; }
   .rc-zone{ position:absolute; cursor:pointer; border-radius:14px; }
   .rc-zone-wheel-l{ left:20%; top:0%; width:28%; height:58%; }
@@ -1533,6 +1540,11 @@
             </div>
           </div>
           <p class="ks-hint">Arrow keys steer &bull; or use the wheel and lever below</p>
+          <div class="rc-arrow-row" aria-hidden="true">
+            <div class="rc-arrow rc-arrow-wheel-l"><span>&#9664;</span></div>
+            <div class="rc-arrow rc-arrow-wheel-r"><span>&#9654;</span></div>
+            <div class="rc-arrow rc-arrow-lever"><span>&#9650;</span><span>&#9660;</span></div>
+          </div>
           <div class="rc-panel-wrap" id="rcPanelWrap">
             <img class="rc-panel-img" id="rcPanelImg" src="" alt="">
             <div class="rc-zone rc-zone-wheel-l" id="rcZoneWheelL"></div>
